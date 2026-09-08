@@ -183,6 +183,7 @@ Cecil 의 `GetType` 은 네임스페이스를 포함한 전체 이름을 요구�
 - `ItemContextMenuExt` 가 `IcyClawz.CustomInteractions.dll` 을 파일로 참조하고 있었는데
   같은 솔루션 안에 있는 프로젝트라 `ProjectReference` 로 교체
 - `MunitionsExpert` 에 `Unity.TextMeshPro` 참조 추가 (위 오버레이 기능용)
+- 빌드 후 `BepInEx\plugins\` 로 자동 복사하는 단계 추가 (원작에는 없었음)
 
 ## 빌드
 
@@ -191,8 +192,18 @@ dotnet build ClientMods.sln -c Release
 dotnet build ClientMods.sln -c Release -p:"SptRoot=D:\내 SPT 경로"
 ```
 
-각 프로젝트의 `bin\Release\` 에 dll 이 나옵니다. `BepInEx\plugins\` 에 넣으세요.
-(원작과 마찬가지로 자동 복사는 없습니다.)
+빌드하면 dll 6개를 **`$(SptRoot)\BepInEx\plugins\` 에 바로 복사합니다.**
+원작은 자동 복사가 없어서 `bin\Release\` 에서 6개를 손으로 옮겨야 했습니다.
+
+허브에서 받는 배포판과 같은 위치(plugins 바로 아래)에 평평하게 넣습니다. 그래야 다시
+빌드했을 때 기존 설치본을 덮어쓰지, 두 벌이 남아서 BepInEx 가 중복 GUID 로 걸리지
+않습니다.
+
+복사가 싫으면:
+
+```
+dotnet build ClientMods.sln -c Release -p:CopyToSpt=false
+```
 
 ---
 

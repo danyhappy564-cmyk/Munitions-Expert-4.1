@@ -1,0 +1,19 @@
+<Project>
+
+  <!--
+    Upstream had no install step - the dlls landed in each project's bin\Release\ and you
+    copied six files by hand. Drop them straight into the install instead. Flat in
+    BepInEx\plugins\, which is where these ship from the hub, so rebuilding overwrites an
+    existing install rather than leaving a second copy for BepInEx to trip over.
+    Turn it off with -p:CopyToSpt=false.
+  -->
+  <PropertyGroup>
+    <CopyToSpt Condition=" '$(CopyToSpt)' == '' ">true</CopyToSpt>
+  </PropertyGroup>
+
+  <Target Name="CopyToSptPlugins" AfterTargets="Build" Condition=" '$(CopyToSpt)' == 'true' ">
+    <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(SptBepInEx)\plugins" />
+    <Message Importance="high" Text="$(TargetFileName) -&gt; $(SptBepInEx)\plugins" />
+  </Target>
+
+</Project>
