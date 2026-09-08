@@ -83,13 +83,13 @@ internal class AmmoTemplatePatch : ModulePatch
 
     [PatchPrefix]
     private static bool PatchPrefix(ref AmmoTemplate __instance) =>
-        __instance.CachedQualities is null;
+        __instance._cachedQualities is null;
 
     [PatchPostfix]
     private static void PatchPostfix(ref List<ItemAttribute> __result, ref AmmoTemplate __instance)
     {
         if (__result is null)
-            __result = __instance.CachedQualities;
+            __result = __instance._cachedQualities;
         else
             __instance.AddExtraAttributes();
     }
@@ -98,7 +98,7 @@ internal class AmmoTemplatePatch : ModulePatch
 internal class ItemViewPatch : ModulePatch
 {
     private static readonly FieldInfo BackgroundColorField =
-        typeof(ItemView).GetField("BackgroundColor", BindingFlags.NonPublic | BindingFlags.Instance);
+        typeof(ItemView).GetField("BackgroundColor", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
 
     protected override MethodBase GetTargetMethod() =>
         typeof(ItemView).GetMethod("UpdateColor", BindingFlags.Public | BindingFlags.Instance);
@@ -116,7 +116,7 @@ internal class ItemViewPatch : ModulePatch
 internal class EntityIconPatch : ModulePatch
 {
     private static readonly FieldInfo ColorPanelField =
-        typeof(EntityIcon).GetField("_colorPanel", BindingFlags.NonPublic | BindingFlags.Instance);
+        typeof(EntityIcon).GetField("_colorPanel", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
 
     protected override MethodBase GetTargetMethod() =>
         typeof(EntityIcon).GetMethod("Show", BindingFlags.Public | BindingFlags.Instance);
@@ -141,7 +141,7 @@ internal class RagfairOfferItemViewPatch : ModulePatch
 {
     // Caption is protected on GridItemView, two levels up from RagfairOfferItemView.
     private static readonly FieldInfo CaptionField =
-        typeof(GridItemView).GetField("Caption", BindingFlags.NonPublic | BindingFlags.Instance);
+        typeof(GridItemView).GetField("Caption", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
 
     protected override MethodBase GetTargetMethod() =>
         typeof(RagfairOfferItemView).GetMethod("UpdateInfo", BindingFlags.Public | BindingFlags.Instance);

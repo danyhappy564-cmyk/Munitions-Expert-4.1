@@ -90,42 +90,49 @@ UIFixes 가 물물교환 매물에서 캡션을 쓴다면 **탄약 물물교환 
 | `ThrowWeapItemClass` | `ThrowWeap` |
 | `TraderClass` | `EFT.Trading.Trader` |
 
-### 2. 멤버 이름 — 대응표가 없어서 실기 로그로 확인했습니다
+### 2. 멤버 이름 — 실제 4.1 어셈블리로 전수 확인
 
-SPT 4.1.5 클라이언트의 BepInEx 로그에는 HarmonyX 가 패치 대상 메서드의 **IL 을 통째로
-덤프**해 둡니다. 거기서 실제 4.1 시그니처를 직접 읽어 확인했습니다.
+멤버는 대응표가 없어서, **실제 SPT 4.1 `Assembly-CSharp.dll`** 을 직접 열어 하나씩
+맞췄습니다. 이름만 본 게 아니라 **접근 지정자와 오버로드 개수까지** 확인했고, 마지막엔
+`MetadataLoadContext` 로 이 모드가 하는 리플렉션 조회를 **그대로 재현해서** 전부
+`null` 아닌 결과가 나오는지 실행해 봤습니다.
 
-| 4.0 | 4.1 | 확인 방법 |
-|---|---|---|
-| `InteractionButtonsContainer.method_1` | `CreateContextButton` | 로그의 IL 덤프 |
-| `InteractionButtonsContainer.method_3` | `CreateDynamicContextButton` | 로그의 IL 덤프 |
-| `InteractionButtonsContainer.method_4` | `CloseSubMenu` | 로그의 IL 덤프 |
-| `InteractionButtonsContainer.method_5` | `BindButton` | 로그의 IL 덤프 |
-| `InteractionButtonsContainer.simpleContextMenuButton_0` | `_subMenuButton` | `ldfld EFT.UI.SimpleContextMenuButton ...::_subMenuButton` |
-| `CompactCharacteristicPanel.string_0` | `_dataForTooltip` | `stfld System.String ...::_dataForTooltip` |
+| 4.0 | 4.1 |
+|---|---|
+| `AmmoTemplate.CachedQualities` | `_cachedQualities` |
+| `InteractionButtonsContainer.method_1` | `CreateContextButton` |
+| `InteractionButtonsContainer.method_3` | `CreateDynamicContextButton` |
+| `InteractionButtonsContainer.method_4` | `CloseSubMenu` |
+| `InteractionButtonsContainer.method_5` | `BindButton` |
+| `InteractionButtonsContainer.simpleContextMenuButton_0` | `_subMenuButton` |
+| `CompactCharacteristicPanel.string_0` | `_dataForTooltip` |
+| `ItemInfoInteractionsAbstractClass<T>.Dictionary_0` | `ContextInteractions<T>._dynamicInteractions` |
+| `TraderClass.SupplyData_0` | `Trader._supplyData` |
+| `DynamicInteractionClass.Action_0` | `DynamicContextInteraction._callback` |
 
-같은 로그에서 이 모드가 이름으로 잡는 나머지 멤버들도 4.1에 그대로 살아 있는 걸
-확인했습니다: `GridItemView.Caption` (`TMPro.TextMeshProUGUI`),
-`RagfairOfferItemView.UpdateInfo`, `ItemView.UpdateColor`, `StaticIcons.GetAttributeIcon`,
-`ItemUiContext.GetItemContextInteractions`, `ItemUiContext.ShowContextMenu`,
-`InteractionButtonsContainer._buttonTemplate` / `_buttonsContainer`,
-`CompactCharacteristicPanel.ItemAttribute` / `SetValues`,
-`DynamicContextInteraction.Key` / `Icon` / `Execute`.
+### 3. 이름만 고쳐서는 안 되는 것 두 가지
 
-### 3. 이름을 못 찾은 멤버는 "모양"으로 찾습니다
+**(a) 접근 지정자가 바뀐 필드 4개.** 4.1은 `[SerializeField] private` 이던 필드
+여럿을 **public** 으로 내보냅니다. 원작은 이것들을 `BindingFlags.NonPublic` 으로만
+찾고 있었고, 그러면 **조용히 `null` 이 돌아옵니다.**
 
-로그에도 안 나오고 표도 없는 멤버가 셋 있었습니다. 이름 대신 **타입으로** 찾도록
-바꿨습니다 — 셋 다 해당 타입에서 그 타입을 가진 유일한 필드라서 모호하지 않습니다.
+| 필드 | 4.1 접근 지정자 |
+|---|---|
+| `GridItemView.Caption` | `public` |
+| `EntityIcon._colorPanel` | `public` |
+| `InteractionButtonsContainer._buttonsContainer` | `public` |
+| `InteractionButtonsContainer._buttonTemplate` | `public` |
 
-| 4.0 이름 | 어디 | 지금 찾는 방법 |
-|---|---|---|
-| `ItemInfoInteractionsAbstractClass<T>.Dictionary_0` | CustomInteractions | `ContextInteractions<T>` 에서 유일한 `Dictionary<string, DynamicContextInteraction>` |
-| `TraderClass.SupplyData_0` | ItemSellPrice | `Trader` 에서 유일한 `SupplyData` |
-| `DynamicInteractionClass.Action_0` | CustomInteractions | `DynamicContextInteraction` 에서 유일한 `Action` |
+이제 필드 조회는 전부 `Public | NonPublic | Instance` 로 통일했습니다.
 
-`Ienumerable_0` → `_subInteractions`, `bool_8` → `_expanded` 처럼 **타입에서 파생된
-이름(`Action_0`, `Dictionary_0`, `SupplyData_0`)은 4.1이 실제로 바꿉니다.** 이름을
-그대로 두면 조용히 `null` 이 돌아와서 NRE 로 죽습니다.
+**(b) 역난독화가 만들어낸 오버로드 충돌.** 4.0에서 `method_0<T>` 와 `method_1` 이라는
+**서로 다른 이름**이던 두 메서드가 4.1에서는 **둘 다 `CreateContextButton`** 이
+됐습니다. 이름만 주고 `GetMethod("CreateContextButton", ...)` 를 부르면
+`AmbiguousMatchException` 이 나면서 `InteractionButtonsContainerExtensions` 정적
+생성자가 통째로 터집니다 — 컨텍스트 메뉴 확장이 전부 죽습니다. 인자 타입 9개를
+명시해서 원하는 오버로드를 특정하도록 고쳤습니다.
+
+이 둘은 **위키 대응표만 보고 타입 이름만 갈아끼웠으면 절대 안 걸렸을** 문제입니다.
 
 ### 4. 프리패처를 들어냈습니다
 
@@ -140,9 +147,10 @@ SPT 4.1.5 클라이언트의 BepInEx 로그에는 HarmonyX 가 패치 대상 메
 가 `null` 을 돌려주기 때문입니다 — 4.1에서 이 타입은 전역이 아니라 `EFT.UI` 안에 있고,
 Cecil 의 `GetType` 은 네임스페이스를 포함한 전체 이름을 요구합니다.
 
-고쳐서 살릴 수도 있었지만, 위 3번에서 `Action_0` 을 리플렉션으로 잡게 바꾸고 생성자를
-`base(id, id, null)` 로 명시하니 **두 가지 조작이 전부 필요 없어졌습니다.** 그래서
-프로젝트를 삭제했습니다. 남겨두면 오히려 손해입니다 — 4.0에서 `public` 이던 필드를
+고쳐서 살릴 수도 있었지만, **4.1에서는 두 조작 다 필요가 없습니다.** 실제 어셈블리를
+열어보니 `DynamicContextInteraction._callback` 은 이미 `public` 이고 readonly 도 아닙니다
+(1번 불필요). 생성자를 `base(id, id, null)` 로 명시하면 2번도 불필요합니다. 그래서
+프로젝트를 삭제했습니다. 남겨두면 오히려 손해입니다 — 이미 `public` 인 게임 필드를
 `protected` 로 **좁히는** 조작이라, 같은 필드를 IL 로 직접 읽는 다른 모드를 깨뜨릴 수
 있습니다.
 
@@ -193,21 +201,24 @@ dotnet build ClientMods.sln -c Release -p:"SptRoot=D:\내 SPT 경로"
 | | 상태 |
 |---|---|
 | 타입 20개 대응 | **확인** — 위키 4.0→4.1 표 전수 대조 |
-| 멤버 6개 대응 | **확인** — 실제 4.1.5 클라 로그의 HarmonyX IL 덤프 |
-| 이름으로 잡는 나머지 멤버가 4.1에 존재 | **대부분 확인** (위 로그). `EntityIcon._colorPanel` / `EntityIcon.Show` / `ItemView.BackgroundColor` / `AmmoTemplate.GetCachedReadonlyQualities` 는 로그에 안 잡혔지만, 넷 다 원래부터 실명이라 역난독화 대상이 아닙니다 |
-| 이름 못 찾은 멤버 3개 | **모양으로 회피** — 해당 타입에서 유일한 타입이라 이름이 뭐가 되든 잡힙니다 |
-| 4.1 형태 어셈블리로 전체 컴파일 | **통과** — 4.0 `Assembly-CSharp` 에 위 타입 리네임을 Cecil로 실제 적용한 DLL을 만들어 6개 프로젝트 전부 빌드 |
-| 실제 4.1 `Assembly-CSharp.dll` 로 컴파일 | **못 함** — 이 작업 환경에 4.1 클라이언트 어셈블리가 없습니다 |
+| 멤버 이름 10개 대응 | **확인** — 실제 4.1 `Assembly-CSharp.dll` 메타데이터 |
+| 이름으로 잡는 모든 멤버가 4.1에 존재 | **확인** — 23개 조회 전부. `MetadataLoadContext` 로 같은 조회를 실행해 `null`/예외가 없는지까지 봤습니다 |
+| 필드 접근 지정자 | **확인** — public 으로 바뀐 4개를 찾아서 고쳤습니다 |
+| 메서드 오버로드 모호성 | **확인** — `CreateContextButton` 하나가 걸렸고 시그니처로 특정했습니다 |
+| 실제 4.1 `Assembly-CSharp.dll` 로 전체 컴파일 | **통과** — 6개 프로젝트 전부, 에러 0 |
 | 인게임 검증 | **안 함** |
+
+남는 경고는 `MagazineInspector` 의 `CS0618` 두 줄뿐입니다 (`InGameStatus.InRaid` 가
+4.1에서 obsolete 로 표시됨). 원작 코드 그대로고 동작에는 문제 없습니다.
 
 ### 안 되면 여기부터 보세요
 
 - **플리 오버레이가 안 뜬다**: `RagfairOfferItemViewPatch` 가 붙었는지 로그에서
   `Enabled patch RagfairOfferItemViewPatch` 를 확인하세요. 붙었는데 안 보이면
   `GridItemView.Caption` 의 RectTransform 이 64×64 아이콘 밖으로 밀려났을 수 있습니다
-- **컨텍스트 메뉴 항목이 사라졌다**: 위 3번의 "모양으로 찾기" 셋 중 하나가
-  `SingleOrDefault` 에서 걸렸을 가능성 — 4.1이 같은 타입 필드를 하나 더 추가했다면
-  예외가 납니다. 로그에 `InvalidOperationException` 이 뜹니다
+- **컨텍스트 메뉴 항목이 사라졌다**: 로그에 `AmbiguousMatchException` 이나
+  `NullReferenceException` 이 있는지 보세요. 클라이언트가 4.1.5보다 새 빌드면 위 3번의
+  이름/시그니처가 또 움직였을 수 있습니다
 - **게임이 아예 안 켜진다**: `BepInEx\patchers\IcyClawz.CustomInteractions.Prepatch.dll`
   이 남아 있는지 확인하세요 (위 4번)
 

@@ -17,11 +17,9 @@ internal static class TraderClassExtensions
     private static IEftSession _Session;
     private static IEftSession Session => _Session ??= ClientAppUtils.GetMainApp().GetClientBackEndSession();
 
-    // Was SupplyData_0 on 4.0's TraderClass. 4.1 deobfuscates names like that one and
-    // publishes no member mapping, so take the only SupplyData-typed field on the type.
-    private static readonly FieldInfo SupplyDataField = typeof(Trader)
-        .GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)
-        .SingleOrDefault(field => field.FieldType == typeof(SupplyData));
+    // SupplyData_0 on 4.0's TraderClass.
+    private static readonly FieldInfo SupplyDataField =
+        typeof(Trader).GetField("_supplyData", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
 
     public static SupplyData GetSupplyData(this Trader trader) =>
         SupplyDataField.GetValue(trader) as SupplyData;
