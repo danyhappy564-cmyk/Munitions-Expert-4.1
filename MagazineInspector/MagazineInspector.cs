@@ -1,13 +1,12 @@
 using Comfort.Common;
 using EFT;
 using EFT.InventoryLogic;
+using EFT.Settings;
 using SPT.Reflection.Utils;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
-
-using InGameStatus = GClass2340;
 
 namespace IcyClawz.MagazineInspector;
 
@@ -33,19 +32,19 @@ internal static class MagazineClassExtensions
         ["tu"] = "Yüklü mühimmat",
     };
 
-    private static ISession _Session;
-    private static ISession Session => _Session ??= ClientAppUtils.GetMainApp().GetClientBackEndSession();
+    private static IEftSession _Session;
+    private static IEftSession Session => _Session ??= ClientAppUtils.GetMainApp().GetClientBackEndSession();
 
     private static Profile ActiveProfile => InGameStatus.InRaid ? GamePlayerOwner.MyPlayer.Profile : Session.Profile;
 
-    public static void AddAmmoCountAttribute(this MagazineItemClass magazine)
+    public static void AddAmmoCountAttribute(this Magazine magazine)
     {
-        ItemAttributeClass attribute = magazine.Attributes.Find(attr => attr.Id is EItemAttributeId.MaxCount);
+        ItemAttribute attribute = magazine.Attributes.Find(attr => attr.Id is EItemAttributeId.MaxCount);
         if (attribute is null)
             return;
         attribute.DisplayNameFunc = () =>
         {
-            string language = Singleton<SharedGameSettingsClass>.Instance?.Game?.Settings?.Language?.GetValue();
+            string language = Singleton<SettingsManager>.Instance?.Game?.Settings?.Language?.GetValue();
             if (language is null || !DisplayNames.ContainsKey(language))
                 language = "en";
             return DisplayNames[language];
@@ -74,7 +73,7 @@ internal static class MagazineClassExtensions
         };
     }
 
-    private static int? GetAmmoCount(MagazineItemClass magazine, Profile profile, out bool magChecked)
+    private static int? GetAmmoCount(Magazine magazine, Profile profile, out bool magChecked)
     {
         if (!InGameStatus.InRaid || magazine.Count == 0)
         {

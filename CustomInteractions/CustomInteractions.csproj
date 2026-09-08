@@ -1,7 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net472</TargetFramework>
     <AssemblyName>IcyClawz.CustomInteractions</AssemblyName>
     <Version>1.8.0</Version>
     <RootNamespace>IcyClawz.CustomInteractions</RootNamespace>
@@ -9,26 +8,31 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <!--
+      Was $(SharedDir)\Assembly-CSharp-CustomInteractions.dll - a prepatched copy of the game
+      assembly that nobody could produce from a fresh clone. Nothing here needs the prepatch
+      any more, so reference the install directly.
+    -->
     <Reference Include="Assembly-CSharp">
-      <HintPath>..\Shared\Assembly-CSharp-CustomInteractions.dll</HintPath>
+      <HintPath>$(SptManaged)\Assembly-CSharp.dll</HintPath>
     </Reference>
     <Reference Include="BepInEx">
-      <HintPath>..\Shared\BepInEx.dll</HintPath>
+      <HintPath>$(SptBepInEx)\core\BepInEx.dll</HintPath>
     </Reference>
     <Reference Include="Comfort">
-      <HintPath>..\Shared\Comfort.dll</HintPath>
+      <HintPath>$(SptManaged)\Comfort.dll</HintPath>
     </Reference>
     <Reference Include="Sirenix.Serialization">
-      <HintPath>..\Shared\Sirenix.Serialization.dll</HintPath>
+      <HintPath>$(SptManaged)\Sirenix.Serialization.dll</HintPath>
     </Reference>
     <Reference Include="SPT.Reflection">
-      <HintPath>..\Shared\spt-reflection.dll</HintPath>
+      <HintPath>$(SptBepInEx)\plugins\spt\spt-reflection.dll</HintPath>
     </Reference>
     <Reference Include="UnityEngine">
-      <HintPath>..\Shared\UnityEngine.dll</HintPath>
+      <HintPath>$(SptManaged)\UnityEngine.dll</HintPath>
     </Reference>
     <Reference Include="UnityEngine.CoreModule">
-      <HintPath>..\Shared\UnityEngine.CoreModule.dll</HintPath>
+      <HintPath>$(SptManaged)\UnityEngine.CoreModule.dll</HintPath>
     </Reference>
   </ItemGroup>
 

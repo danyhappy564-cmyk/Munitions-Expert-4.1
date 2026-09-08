@@ -1,4 +1,5 @@
 using BepInEx;
+using EFT.InventoryLogic;
 using SPT.Reflection.Patching;
 using System.Reflection;
 
@@ -14,9 +15,9 @@ public class Plugin : BaseUnityPlugin
 internal class MagazinePatch : ModulePatch
 {
     protected override MethodBase GetTargetMethod() =>
-        typeof(MagazineItemClass).GetConstructors()[0];
+        typeof(Magazine).GetConstructors()[0];
 
     [PatchPostfix]
-    private static void PatchPostfix(ref MagazineItemClass __instance) =>
+    private static void PatchPostfix(ref Magazine __instance) =>
         __instance.AddAmmoCountAttribute();
 }

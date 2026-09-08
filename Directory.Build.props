@@ -1,0 +1,26 @@
+<Project>
+
+  <!--
+    Every project referenced ..\Shared\*.dll - a folder that is not in the repository and
+    has to be filled by hand, so a fresh clone fails on every reference at once with no
+    hint as to what is missing. Reference the install instead: it already holds the exact
+    assemblies the game will load. Override with -p:SptRoot=... or an SptRoot environment
+    variable.
+  -->
+  <PropertyGroup>
+    <SptRoot Condition=" '$(SptRoot)' == '' ">E:\SPT 4.1</SptRoot>
+    <SptManaged>$(SptRoot)\EscapeFromTarkov_Data\Managed</SptManaged>
+    <SptBepInEx>$(SptRoot)\BepInEx</SptBepInEx>
+
+    <!-- netstandard2.1, matching what SPT 4.1 client plugins target. Was net472. -->
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+  </PropertyGroup>
+
+  <Target Name="EnsureSptRoot" BeforeTargets="BeforeBuild;ResolveAssemblyReferences">
+    <Error Condition="!Exists('$(SptManaged)\Assembly-CSharp.dll')"
+           Text="SptRoot '$(SptRoot)' does not look like an SPT install (missing EscapeFromTarkov_Data\Managed\Assembly-CSharp.dll). Pass -p:SptRoot=... or set the SptRoot environment variable." />
+  </Target>
+
+</Project>
