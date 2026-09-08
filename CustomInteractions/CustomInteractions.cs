@@ -42,25 +42,14 @@ public class CustomInteraction(ItemUiContext context)
 
 internal sealed class CustomInteractionImpl(ItemUiContext context, string id) : DynamicContextInteraction(id, id, null)
 {
-    // 4.0 called the callback field Action_0 and CustomInteractions.Prepatch widened it so
-    // this subclass could assign it directly. Names derived from their own type are exactly
-    // what 4.1's deobfuscator rewrites and no member mapping is published, so go by shape -
-    // it is the only Action field on DynamicContextInteraction. That, plus passing the
-    // callback explicitly above instead of leaning on a prepatched default, is what let the
-    // prepatcher go away entirely.
-    private static readonly FieldInfo CallbackField = typeof(DynamicContextInteraction)
-        .GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)
-        .SingleOrDefault(field => field.FieldType == typeof(Action));
-
+    // Action_0 on 4.0, where CustomInteractions.Prepatch had to widen it before this
+    // subclass could assign it. 4.1 ships it public and writable, and the base constructor
+    // is called with an explicit null above, so the prepatcher has nothing left to do.
     internal readonly ItemUiContext Context = context;
 
     public Func<string> Caption { get; set; }
     public new Func<Sprite> Icon { get; set; }
-    public Action Action
-    {
-        get => CallbackField?.GetValue(this) as Action;
-        set => CallbackField?.SetValue(this, value);
-    }
+    public Action Action { get => _callback; set => _callback = value; }
     public Func<IEnumerable<CustomInteraction>> SubMenu { get; set; }
     public Func<bool> Enabled { get; set; }
     public Func<string> Error { get; set; }
@@ -76,18 +65,10 @@ internal sealed class CustomInteractionsImpl(ItemUiContext context) : EmptyInter
 
 internal static class AbstractInteractionsExtensions
 {
-    // 4.0 called this field Dictionary_0. Names derived from their own type are exactly what
-    // 4.1's deobfuscator rewrites, and no member mapping is published, so match on shape
-    // instead: it is the only Dictionary<string, DynamicContextInteraction> on the type.
-    private static class DynamicInteractionsField<T> where T : struct, Enum
-    {
-        internal static readonly FieldInfo Value = typeof(ContextInteractions<T>)
-            .GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)
-            .SingleOrDefault(field => field.FieldType == typeof(Dictionary<string, DynamicContextInteraction>));
-    }
-
+    // Dictionary_0 on 4.0.
     private static Dictionary<string, DynamicContextInteraction> GetDynamicInteractions<T>(this ContextInteractions<T> instance) where T : struct, Enum =>
-        DynamicInteractionsField<T>.Value?.GetValue(instance) as Dictionary<string, DynamicContextInteraction>;
+        typeof(ContextInteractions<T>).GetField("_dynamicInteractions", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)
+            .GetValue(instance) as Dictionary<string, DynamicContextInteraction>;
 
     public static void AddCustomInteraction<T>(this ContextInteractions<T> instance, CustomInteractionImpl impl) where T : struct, Enum =>
         instance.GetDynamicInteractions()[impl.Key] = impl;
@@ -96,25 +77,33 @@ internal static class AbstractInteractionsExtensions
 internal static class InteractionButtonsContainerExtensions
 {
     private static readonly FieldInfo ButtonsContainerField =
-        typeof(InteractionButtonsContainer).GetField("_buttonsContainer", BindingFlags.NonPublic | BindingFlags.Instance);
+        typeof(InteractionButtonsContainer).GetField("_buttonsContainer", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
 
     private static RectTransform GetButtonsContainer(this InteractionButtonsContainer instance) =>
         ButtonsContainerField.GetValue(instance) as RectTransform;
 
     private static readonly FieldInfo ButtonTemplateField =
-        typeof(InteractionButtonsContainer).GetField("_buttonTemplate", BindingFlags.NonPublic | BindingFlags.Instance);
+        typeof(InteractionButtonsContainer).GetField("_buttonTemplate", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
 
     private static SimpleContextMenuButton GetButtonTemplate(this InteractionButtonsContainer instance) =>
         ButtonTemplateField.GetValue(instance) as SimpleContextMenuButton;
 
     private static readonly FieldInfo CurrentButtonField =
-        typeof(InteractionButtonsContainer).GetField("_subMenuButton", BindingFlags.NonPublic | BindingFlags.Instance);
+        typeof(InteractionButtonsContainer).GetField("_subMenuButton", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
 
     private static void SetCurrentButton(this InteractionButtonsContainer instance, SimpleContextMenuButton button) =>
         CurrentButtonField.SetValue(instance, button);
 
+    // 4.0 had these as two differently named methods, method_0<T> and method_1. 4.1 gave
+    // both the same real name, so a lookup by name alone now throws AmbiguousMatchException
+    // and takes the whole class down with it. Spell the signature out.
     private static readonly MethodInfo CreateButtonMethod =
-        typeof(InteractionButtonsContainer).GetMethod("CreateContextButton", BindingFlags.Public | BindingFlags.Instance);
+        typeof(InteractionButtonsContainer).GetMethod("CreateContextButton",
+            BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance, null,
+            [
+                typeof(string), typeof(string), typeof(SimpleContextMenuButton), typeof(RectTransform),
+                typeof(Sprite), typeof(Action), typeof(Action), typeof(bool), typeof(bool)
+            ], null);
 
     private static SimpleContextMenuButton CreateButton(this InteractionButtonsContainer instance,
         string key, string caption, SimpleContextMenuButton template, RectTransform container,
