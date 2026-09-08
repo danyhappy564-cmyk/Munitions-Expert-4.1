@@ -1,4 +1,5 @@
 using Comfort.Common;
+using EFT;
 using EFT.InventoryLogic;
 using System;
 using System.Collections.Generic;
@@ -69,7 +70,7 @@ internal static class AmmoTemplateExtensions
 {
     public static void AddExtraAttributes(this AmmoTemplate instance)
     {
-        instance.SafelyAddQualityToList(new ItemAttributeClass(EAmmoExtraAttributeId.ArmorDamage)
+        instance.SafelyAddQualityToList(new ItemAttribute(EAmmoExtraAttributeId.ArmorDamage)
         {
             Name = EAmmoExtraAttributeId.ArmorDamage.ToString(),
             DisplayNameFunc = () => "Armor damage",
@@ -78,7 +79,7 @@ internal static class AmmoTemplateExtensions
             DisplayType = () => EItemAttributeDisplayType.Compact,
         });
 
-        instance.SafelyAddQualityToList(new ItemAttributeClass(EItemAttributeId.DurabilityBurn)
+        instance.SafelyAddQualityToList(new ItemAttribute(EItemAttributeId.DurabilityBurn)
         {
             Name = EItemAttributeId.DurabilityBurn.GetName(),
             Base = () => instance.DurabilityBurnModificator - 1f,
@@ -88,7 +89,7 @@ internal static class AmmoTemplateExtensions
             LessIsGood = true,
         });
 
-        instance.SafelyAddQualityToList(new ItemAttributeClass(EItemAttributeId.HeatFactor)
+        instance.SafelyAddQualityToList(new ItemAttribute(EItemAttributeId.HeatFactor)
         {
             Name = EItemAttributeId.HeatFactor.GetName(),
             Base = () => instance.HeatFactor - 1f,
@@ -98,7 +99,7 @@ internal static class AmmoTemplateExtensions
             LessIsGood = true,
         });
 
-        instance.SafelyAddQualityToList(new ItemAttributeClass(EAmmoExtraAttributeId.FragmentationChance)
+        instance.SafelyAddQualityToList(new ItemAttribute(EAmmoExtraAttributeId.FragmentationChance)
         {
             Name = EAmmoExtraAttributeId.FragmentationChance.ToString(),
             DisplayNameFunc = () => "Fragmentation chance",
@@ -107,7 +108,7 @@ internal static class AmmoTemplateExtensions
             DisplayType = () => EItemAttributeDisplayType.Compact,
         });
 
-        instance.SafelyAddQualityToList(new ItemAttributeClass(EAmmoExtraAttributeId.RicochetChance)
+        instance.SafelyAddQualityToList(new ItemAttribute(EAmmoExtraAttributeId.RicochetChance)
         {
             Name = EAmmoExtraAttributeId.RicochetChance.ToString(),
             DisplayNameFunc = () => "Ricochet chance",
@@ -116,7 +117,7 @@ internal static class AmmoTemplateExtensions
             DisplayType = () => EItemAttributeDisplayType.Compact,
         });
 
-        instance.SafelyAddQualityToList(new ItemAttributeClass(EItemAttributeId.MalfMisfireChance)
+        instance.SafelyAddQualityToList(new ItemAttribute(EItemAttributeId.MalfMisfireChance)
         {
             Name = EItemAttributeId.MalfMisfireChance.GetName(),
             Base = () => instance.MalfMisfireChance,
@@ -134,7 +135,7 @@ internal static class AmmoTemplateExtensions
             DisplayType = () => EItemAttributeDisplayType.Compact,
         });
 
-        instance.SafelyAddQualityToList(new ItemAttributeClass(EItemAttributeId.MalfFeedChance)
+        instance.SafelyAddQualityToList(new ItemAttribute(EItemAttributeId.MalfFeedChance)
         {
             Name = EItemAttributeId.MalfFeedChance.GetName(),
             Base = () => instance.MalfFeedChance,
@@ -155,7 +156,7 @@ internal static class AmmoTemplateExtensions
 
     public static int GetPenetrationArmorClass(this AmmoTemplate instance)
     {
-        var armorClasses = Singleton<BackendConfigSettingsClass>.Instance.Armor.ArmorClass;
+        var armorClasses = Singleton<GlobalConfiguration>.Instance.Armor.ArmorClass;
         for (int i = armorClasses.Length - 1; i >= 0; i--)
             if (armorClasses[i].Resistance <= instance.PenetrationPower)
                 return i;

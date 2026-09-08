@@ -1,4 +1,5 @@
 using BepInEx;
+using EFT.InventoryLogic;
 using EFT.UI;
 using SPT.Reflection.Patching;
 using System.Linq;
@@ -22,8 +23,8 @@ internal class ItemUiContextPatch : ModulePatch
         typeof(ItemUiContext).GetMethod("GetItemContextInteractions", BindingFlags.Public | BindingFlags.Instance);
 
     [PatchPostfix]
-    private static void Postfix(ref ItemInfoInteractionsAbstractClass<EFT.InventoryLogic.EItemInfoButton> __result,
-        ref ItemUiContext __instance, ItemContextClass itemContext)
+    private static void Postfix(ref ContextInteractions<EFT.InventoryLogic.EItemInfoButton> __result,
+        ref ItemUiContext __instance, DragItemContext itemContext)
     {
         foreach (var provider in CustomInteractionsManager.Providers)
         {
@@ -39,10 +40,10 @@ internal class ItemUiContextPatch : ModulePatch
 internal class InteractionButtonsContainerPatch : ModulePatch
 {
     protected override MethodBase GetTargetMethod() =>
-        typeof(InteractionButtonsContainer).GetMethod("method_3", BindingFlags.Public | BindingFlags.Instance);
+        typeof(InteractionButtonsContainer).GetMethod("CreateDynamicContextButton", BindingFlags.Public | BindingFlags.Instance);
 
     [PatchPrefix]
-    private static bool Prefix(ref InteractionButtonsContainer __instance, DynamicInteractionClass interaction)
+    private static bool Prefix(ref InteractionButtonsContainer __instance, DynamicContextInteraction interaction)
     {
         if (interaction is CustomInteractionImpl impl)
         {

@@ -1,10 +1,8 @@
-Microsoft Visual Studio Solution File, Format Version 12.00
+﻿Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.2.32616.157
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CustomInteractions", "CustomInteractions\CustomInteractions.csproj", "{F296FF55-A8D8-47E3-90C0-6975CA0787F9}"
-EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CustomInteractions.Prepatch", "CustomInteractions.Prepatch\CustomInteractions.Prepatch.csproj", "{E8C5359B-95CE-4547-B72E-C9BEBB9220CC}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ItemAttributeFix", "ItemAttributeFix\ItemAttributeFix.csproj", "{F3186B2D-F170-4E31-98BF-4CC8CDAD565D}"
 EndProject
@@ -26,10 +24,6 @@ Global
 		{F296FF55-A8D8-47E3-90C0-6975CA0787F9}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{F296FF55-A8D8-47E3-90C0-6975CA0787F9}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{F296FF55-A8D8-47E3-90C0-6975CA0787F9}.Release|Any CPU.Build.0 = Release|Any CPU
-		{E8C5359B-95CE-4547-B72E-C9BEBB9220CC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{E8C5359B-95CE-4547-B72E-C9BEBB9220CC}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{E8C5359B-95CE-4547-B72E-C9BEBB9220CC}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{E8C5359B-95CE-4547-B72E-C9BEBB9220CC}.Release|Any CPU.Build.0 = Release|Any CPU
 		{F3186B2D-F170-4E31-98BF-4CC8CDAD565D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{F3186B2D-F170-4E31-98BF-4CC8CDAD565D}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{F3186B2D-F170-4E31-98BF-4CC8CDAD565D}.Release|Any CPU.ActiveCfg = Release|Any CPU
