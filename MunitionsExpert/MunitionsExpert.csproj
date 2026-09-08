@@ -5,26 +5,18 @@
     <Version>1.7.0</Version>
     <RootNamespace>IcyClawz.MunitionsExpert</RootNamespace>
     <LangVersion>latest</LangVersion>
-    <!--
-      The one project that stays on net472 rather than the solution-wide netstandard2.1.
-      Resources.resx holds three PNGs and Resources.Designer.cs types them as
-      System.Drawing.Bitmap, which ImageExtensions.ToSprite re-encodes to PNG bytes for
-      Unity. System.Drawing does not exist on netstandard2.1, and the resx path there needs
-      the preserialized resource writer on top - so the icons would have to be reworked to
-      raw bytes to move this project over. BepInEx loads net472 plugins on Mono perfectly
-      well, and this is what upstream shipped, so leave it and keep the change to the port.
-    -->
-    <TargetFramework>net472</TargetFramework>
-    <!--
-      Modern SDKs dropped BinaryFormatter-based resource writing outright, so the PNGs in
-      Resources.resx need the preserialized writer and its package even on net472
-      (MSB3822/MSB3823).
-    -->
-    <GenerateResourceUsePreserializedResources>true</GenerateResourceUsePreserializedResources>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="System.Resources.Extensions" Version="8.0.0" />
+    <!--
+      The three attribute icons. They used to live in Resources.resx typed as
+      System.Drawing.Bitmap, which needed net472 for System.Drawing and, on modern SDKs, the
+      preserialized resource writer - and that writer stamps System.Resources.Extensions into
+      the .resources header, an assembly BepInEx does not ship. Reading an icon then threw
+      inside a Harmony prefix and broke the examine window. Ship the PNG bytes as-is instead;
+      IconCache turns them into sprites with Texture2D.LoadImage.
+    -->
+    <EmbeddedResource Include="Resources\*.png" LogicalName="$(RootNamespace).Resources.%(Filename)%(Extension)" />
   </ItemGroup>
 
   <ItemGroup>
@@ -58,21 +50,6 @@
     <Reference Include="UnityEngine.UI">
       <HintPath>$(SptManaged)\UnityEngine.UI.dll</HintPath>
     </Reference>
-  </ItemGroup>
-
-  <ItemGroup>
-    <Compile Update="Properties\Resources.Designer.cs">
-      <DesignTime>True</DesignTime>
-      <AutoGen>True</AutoGen>
-      <DependentUpon>Resources.resx</DependentUpon>
-    </Compile>
-  </ItemGroup>
-
-  <ItemGroup>
-    <EmbeddedResource Update="Properties\Resources.resx">
-      <Generator>ResXFileCodeGenerator</Generator>
-      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
-    </EmbeddedResource>
   </ItemGroup>
 
 </Project>

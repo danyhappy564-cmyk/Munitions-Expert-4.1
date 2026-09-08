@@ -10,16 +10,21 @@
 
 현재 기준 **SPT 4.1**.
 
-포함된 플러그인:
+이 레포는 모드 **하나가 아니라 6개**입니다 (원작이 자기 클라이언트 모드를 한 솔루션에
+모아둔 모음집). 서로 독립이라 원하는 것만 골라 빌드하면 됩니다.
 
-| 프로젝트 | 하는 일 |
-|---|---|
-| `MunitionsExpert` | 탄약에 관통/장갑피해/파편화/도탄/내구소모/발열/불발 항목을 추가하고, 아이콘 배경을 관통 레벨 색으로 칠함 |
-| `MagazineInspector` | 탄창에 들어 있는 탄약 수를 스킬 수준에 맞춰 표시 |
-| `ItemSellPrice` | 아이템 정보창에 상인 판매가 표시 |
-| `ItemAttributeFix` | 압축 표시된 속성 툴팁이 잘린 값을 보여주던 문제 수정 |
-| `CustomInteractions` | 다른 모드가 컨텍스트 메뉴에 항목을 붙일 수 있게 해주는 API |
-| `ItemContextMenuExt` | 위 API 로 붙는 실제 메뉴 항목들 |
+| 프로젝트 | 하는 일 | 의존 |
+|---|---|---|
+| `MunitionsExpert` | 탄약에 관통/장갑피해/파편화/도탄/내구소모/발열/불발 항목을 추가하고, 아이콘 배경을 관통 레벨 색으로 칠하고, 플리 매물에 `[관통력/데미지]` 를 겹쳐 표시 | 없음 |
+| `ItemAttributeFix` | 압축 표시된 속성 툴팁이 잘린 값을 보여주던 문제 수정 | 없음 |
+| `MagazineInspector` | 탄창에 들어 있는 탄약 수를 스킬 수준에 맞춰 표시 | 없음 |
+| `ItemSellPrice` | 아이템 정보창에 상인 판매가 표시 | 없음 |
+| `CustomInteractions` | 다른 모드가 컨텍스트 메뉴에 항목을 붙일 수 있게 해주는 API (그 자체로는 기능 없음) | 없음 |
+| `ItemContextMenuExt` | 우클릭 메뉴에 발사모드 / 조준경 배율·영점 / 택티컬 온오프 추가 | `CustomInteractions` |
+
+`MunitionsExpert` 만 쓸 거면 그 프로젝트만 빌드하면 됩니다 (아래 "빌드" 참고).
+`ItemAttributeFix` 는 같이 넣는 걸 권합니다 — `MunitionsExpert` 가 추가하는 항목이 전부
+압축 표시 타입이고, 바닐라는 그 툴팁 값을 잘라서 보여줍니다.
 
 ---
 
@@ -164,6 +169,51 @@ Cecil 의 `GetType` 은 네임스페이스를 포함한 전체 이름을 요구�
 
 ---
 
+## 5. 아이콘을 resx 에서 꺼냈습니다 (검사창이 깨지던 원인)
+
+증상: 탄약을 검사하면 창 제목이 `EXAMINE : {0}` 인 채로 뜨고, 이름 자리에 `Blablabla`
+가 박히고, 속성 값이 비고, **닫기 버튼이 안 먹습니다.**
+
+원인은 아이콘 3장(`ArmorDamage` / `FragmentationChance` / `RicochetChance`)이 실려 있던
+방식입니다.
+
+1. 원작은 이 PNG 들을 `Resources.resx` 에 `System.Drawing.Bitmap` 으로 넣어뒀습니다
+2. 요즘 .NET SDK 는 BinaryFormatter 기반 리소스 쓰기를 빼버려서, 그대로 빌드하면
+   `MSB3822`/`MSB3823` 으로 실패합니다
+3. 그래서 `GenerateResourceUsePreserializedResources` 를 켰는데 — **이게 함정입니다.**
+   이 옵션은 `.resources` 헤더에 리더/셋 타입으로
+   `System.Resources.Extensions.DeserializingResourceReader` 를 박아넣고, 런타임에 그
+   어셈블리를 요구합니다. **BepInEx 는 `System.Resources.Extensions.dll` 을 안 실어줍니다**
+4. → `Properties.Resources.ArmorDamage` 가 던짐 → `IconCache` 정적 생성자가
+   `TypeInitializationException` → 이 캐시를 읽는
+   `StaticIcons.GetAttributeIcon` **프리픽스가 호출될 때마다 던짐** → 게임이 검사창을
+   만들다 말고 죽음 → 제목이 포맷 문자열 그대로 남고 닫기 핸들러가 안 붙음
+
+고친 방식: resx / `System.Drawing` 을 통째로 버리고 **PNG 바이트를 그대로 임베드**해서
+`Texture2D.LoadImage` 로 읽습니다. 두 의존이 다 사라지고, 덕분에 이 프로젝트도
+`netstandard2.1` 로 넘어갔습니다.
+
+거기에 더해 `IconCache` 는 **이제 절대 예외를 밖으로 안 냅니다.** 아이콘 로딩이 실패하면
+로그만 남기고 `null` 을 돌려주고, 그러면 게임이 자기 아이콘 조회로 넘어갑니다 (그쪽은
+못 찾아도 로그만 찍습니다). Harmony 프리픽스 안에서 던지면 UI 가 통째로 깨진다는 걸
+이번에 확인했으니, 같은 실수가 다시 나와도 검사창은 살아 있습니다.
+
+빌드 산출물로 검증한 것:
+
+```
+target: .NETStandard,Version=v2.1
+  resource: IcyClawz.MunitionsExpert.Resources.ArmorDamage.png
+  resource: IcyClawz.MunitionsExpert.Resources.FragmentationChance.png
+  resource: IcyClawz.MunitionsExpert.Resources.RicochetChance.png
+ok ...ArmorDamage.png         649 bytes  pngSignature=True  identicalToSourceFile=True
+ok ...FragmentationChance.png  733 bytes  pngSignature=True  identicalToSourceFile=True
+ok ...RicochetChance.png       681 bytes  pngSignature=True  identicalToSourceFile=True
+```
+
+DLL 안에 `System.Resources.*` / `System.Drawing*` 문자열은 이제 하나도 없습니다.
+
+---
+
 ## 빌드 설정도 갈아엎었습니다
 
 - **모든 프로젝트가 `..\Shared\*.dll` 을 참조하고 있었습니다** — 레포에 없고 손으로
@@ -172,14 +222,8 @@ Cecil 의 `GetType` 은 네임스페이스를 포함한 전체 이름을 요구�
   (기본값 `E:\SPT 4.1`, `-p:SptRoot=...` 또는 환경변수로 덮어쓰기)
 - `SptRoot` 가 SPT 설치본이 아니면 "타입을 찾을 수 없음" 수십 줄 대신 **이유를 말하는
   에러 하나**로 실패합니다
-- `net472` → `netstandard2.1` (SPT 4.1 클라 플러그인 기준). **단 `MunitionsExpert` 만
-  `net472` 로 남겼습니다** — `Resources.resx` 에 PNG 3장이 들어 있고 디자이너가 그걸
-  `System.Drawing.Bitmap` 으로 타이핑하는데, `System.Drawing` 은 netstandard2.1에
-  없습니다. 아이콘을 raw byte 로 갈아엎지 않는 한 못 옮깁니다. BepInEx 는 Mono 에서
-  net472 플러그인을 잘 로드하고 원작도 그렇게 배포했으니 그대로 뒀습니다
-- 요즘 SDK 는 BinaryFormatter 기반 리소스 쓰기를 아예 빼버려서, net472에서도 위 PNG
-  들이 MSB3822/MSB3823 으로 실패합니다 → `GenerateResourceUsePreserializedResources`
-  + `System.Resources.Extensions` 추가
+- `net472` → `netstandard2.1` (SPT 4.1 클라 플러그인 기준). 6개 전부. `MunitionsExpert`
+  를 붙잡고 있던 `System.Drawing` 은 아래 아이콘 처리를 바꾸면서 없어졌습니다
 - `ItemContextMenuExt` 가 `IcyClawz.CustomInteractions.dll` 을 파일로 참조하고 있었는데
   같은 솔루션 안에 있는 프로젝트라 `ProjectReference` 로 교체
 - `MunitionsExpert` 에 `Unity.TextMeshPro` 참조 추가 (위 오버레이 기능용)
@@ -187,9 +231,17 @@ Cecil 의 `GetType` 은 네임스페이스를 포함한 전체 이름을 요구�
 
 ## 빌드
 
+6개 전부:
+
 ```
 dotnet build ClientMods.sln -c Release
 dotnet build ClientMods.sln -c Release -p:"SptRoot=D:\내 SPT 경로"
+```
+
+`MunitionsExpert` 만 (권장 조합):
+
+```
+dotnet build MunitionsExpert/MunitionsExpert.csproj ItemAttributeFix/ItemAttributeFix.csproj -c Release
 ```
 
 빌드하면 dll 6개를 **`$(SptRoot)\BepInEx\plugins\` 에 바로 복사합니다.**
@@ -232,6 +284,8 @@ dotnet build ClientMods.sln -c Release -p:CopyToSpt=false
   이름/시그니처가 또 움직였을 수 있습니다
 - **게임이 아예 안 켜진다**: `BepInEx\patchers\IcyClawz.CustomInteractions.Prepatch.dll`
   이 남아 있는지 확인하세요 (위 4번)
+- **검사창이 `EXAMINE : {0}` / `Blablabla` 로 뜨고 안 닫힌다**: 위 5번 증상입니다. 예전
+  빌드의 `IcyClawz.MunitionsExpert.dll` 이 남아 있는 겁니다 — 다시 빌드해서 덮어쓰세요
 
 ---
 
