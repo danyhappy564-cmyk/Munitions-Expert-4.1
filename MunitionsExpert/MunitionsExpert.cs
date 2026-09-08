@@ -42,28 +42,63 @@ internal enum EAmmoExtraAttributeId
     ArmorDamage, FragmentationChance, RicochetChance
 }
 
-internal static class ImageExtensions
-{
-    public static Sprite ToSprite(this System.Drawing.Image instance)
-    {
-        using MemoryStream ms = new();
-        instance.Save(ms, System.Drawing.Imaging.ImageFormat.Png);
-        Texture2D texture = new(instance.Width, instance.Height, TextureFormat.RGBA32, false);
-        texture.LoadImage(ms.ToArray());
-        return Sprite.Create(texture, new Rect(0, 0, texture.width, texture.height), Vector2.zero);
-    }
-}
-
 internal static class IconCache
 {
-    private static readonly Dictionary<Enum, Sprite> Cache = new()
-    {
-        [EAmmoExtraAttributeId.ArmorDamage] = Properties.Resources.ArmorDamage.ToSprite(),
-        [EAmmoExtraAttributeId.FragmentationChance] = Properties.Resources.FragmentationChance.ToSprite(),
-        [EAmmoExtraAttributeId.RicochetChance] = Properties.Resources.RicochetChance.ToSprite(),
-    };
+    private static readonly Dictionary<Enum, Sprite> Cache = [];
+    private static bool Loaded;
 
-    public static Sprite Get(Enum id) => Cache.TryGetValue(id, out Sprite sprite) ? sprite : default;
+    public static Sprite Get(Enum id)
+    {
+        if (!Loaded)
+            Load();
+        return Cache.TryGetValue(id, out Sprite sprite) ? sprite : default;
+    }
+
+    // Deliberately cannot throw. Get is called from a Harmony prefix on
+    // StaticIcons.GetAttributeIcon, which the game calls while it is building the examine
+    // window; an exception escaping here leaves that window half-drawn, with its title stuck
+    // on the raw "EXAMINE : {0}" format string and its close button dead. Returning null
+    // instead just hands the id back to the game's own icon lookup, which only logs.
+    private static void Load()
+    {
+        Loaded = true;
+        foreach (EAmmoExtraAttributeId id in Enum.GetValues(typeof(EAmmoExtraAttributeId)))
+        {
+            try
+            {
+                Cache[id] = LoadSprite(id.ToString());
+            }
+            catch (Exception ex)
+            {
+                Plugin.Log?.LogError($"Could not load the {id} icon: {ex}");
+            }
+        }
+    }
+
+    // The icons used to travel in Resources.resx as System.Drawing.Bitmap. That pulled in
+    // System.Drawing (which pinned the project to net472) and, on modern SDKs, the
+    // preserialized resource writer - which stamps System.Resources.Extensions into the
+    // .resources header and needs that assembly at runtime. BepInEx never ships it, so
+    // reading the icons threw and took the examine window down with it. Raw PNG bytes and
+    // Texture2D.LoadImage need neither.
+    private static Sprite LoadSprite(string name)
+    {
+        string path = $"IcyClawz.MunitionsExpert.Resources.{name}.png";
+        using Stream stream = typeof(IconCache).Assembly.GetManifestResourceStream(path)
+            ?? throw new InvalidOperationException($"embedded resource {path} is missing");
+        byte[] png = new byte[stream.Length];
+        for (int read = 0; read < png.Length;)
+        {
+            int count = stream.Read(png, read, png.Length - read);
+            if (count <= 0)
+                throw new InvalidOperationException($"embedded resource {path} ended after {read} of {png.Length} bytes");
+            read += count;
+        }
+        Texture2D texture = new(2, 2, TextureFormat.RGBA32, false);
+        if (!texture.LoadImage(png))
+            throw new InvalidOperationException($"embedded resource {path} is not a readable PNG");
+        return Sprite.Create(texture, new Rect(0, 0, texture.width, texture.height), Vector2.zero);
+    }
 }
 
 internal static class AmmoTemplateExtensions

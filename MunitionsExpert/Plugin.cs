@@ -1,5 +1,6 @@
 using BepInEx;
 using BepInEx.Configuration;
+using BepInEx.Logging;
 using EFT.HandBook;
 using EFT.InventoryLogic;
 using EFT.UI;
@@ -17,6 +18,8 @@ namespace IcyClawz.MunitionsExpert;
 [BepInPlugin("com.IcyClawz.MunitionsExpert", "IcyClawz.MunitionsExpert", "1.7.0")]
 public class Plugin : BaseUnityPlugin
 {
+    internal static ManualLogSource Log { get; private set; }
+
     private static ConfigEntry<bool> ColorizeConfig { get; set; }
     private static ConfigEntry<ColorName>[] ArmorClassColorConfigs { get; set; }
     private static ConfigEntry<bool> FleaAmmoStatsConfig { get; set; }
@@ -24,6 +27,8 @@ public class Plugin : BaseUnityPlugin
 
     private void Awake()
     {
+        Log = Logger;
+
         const string SECTION = "Colorize Icon Backgrounds";
         ColorizeConfig = Config.Bind(SECTION, "", true, new ConfigurationManagerAttributes { Order = 7 });
         ArmorClassColorConfigs = [
